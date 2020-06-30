@@ -1,0 +1,55 @@
+﻿<Window x:Class="Rendering3D.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Rendering3D"
+        Loaded="GetSceneSize"
+        ResizeMode="NoResize"
+        mc:Ignorable="d"
+        KeyDown="SceneKeyDown"
+        Title="MainWindow" Height="650" Width="1300">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition x:Name="SceneColumn" Width="*"/>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="40"/>
+            <ColumnDefinition Width="10"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10"/>
+            <RowDefinition x:Name="SceneRow" Height="*"/>
+            <RowDefinition Height="10"/>
+        </Grid.RowDefinitions>
+
+        <Image x:Name="SceneImage" Grid.Column="1" Grid.Row="1" 
+               PreviewMouseLeftButtonDown="SceneMouseLeftButtonDown" 
+               PreviewMouseLeftButtonUp="SceneMouseLeftButtonUp"
+               MouseWheel="SceneMouseWheel"
+               />
+
+        <Grid Grid.Column="3" Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="10"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="10"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid.Resources>
+                <Style TargetType="Button">
+                    <Setter Property="Padding" Value="0 5 0 5"/>
+                </Style>
+            </Grid.Resources>
+
+            <Button Grid.Row="0" Content="+" Command="{Binding ZoomPlusSceneCommand}"/>
+            <Button Grid.Row="2" Content="-" Command="{Binding ZoomMinusSceneCommand}"/>
+            <Label  Grid.Row="4" Content="Zoom" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Row="5" Text="{Binding ZoomProperty}" HorizontalAlignment="Center"/>
+        </Grid>
+    </Grid>
+</Window> 
