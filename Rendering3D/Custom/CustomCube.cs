@@ -72,6 +72,11 @@ namespace Rendering3D.Custom
             return 6 * (a * a);
         }
 
+        public double GetCenterY()
+        {
+            return a / 2;
+        }
+
         public Bitmap Draw(Bitmap bitmap)
         {
             Random random = new Random(Guid.NewGuid().GetHashCode());

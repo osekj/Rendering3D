@@ -34,7 +34,7 @@ namespace Rendering3D.Custom
                                     (float)vertices[2].x, (float)vertices[2].y);
             }
 
-            bitmap = Helpers.FillTriangle.Apply(bitmap, vertices, Color.Yellow);
+            //bitmap = Helpers.FillTriangle.Apply(bitmap, vertices, Color.Yellow);
 
             return bitmap;
         }

@@ -59,6 +59,8 @@ namespace Rendering3D
         double aspect;
         double fov = 1;
 
+        double theta = Math.PI / 2;
+
         double near = 0.1;
         double far = 1000;
 
@@ -67,9 +69,11 @@ namespace Rendering3D
         Matrix<double> T;
         Matrix<double> Zoom;
 
-        Vector<double> C = DenseVector.Build.DenseOfArray(new double[4] { 3.0, 1.5, 0, 0 });
+        Vector<double> Camera = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0 });
 
-        double rotationChange = Math.PI / 60;
+        Vector<double> C = DenseVector.Build.DenseOfArray(new double[4] { 1, 0.5, 0, 0 });
+
+        double rotationChange = Math.PI / 120;
 
         double xRotation = 0;
         double yRotation = 0;
@@ -92,14 +96,12 @@ namespace Rendering3D
             ZoomMinusSceneCommand = new RelayCommand(ZoomMinus);
 
             Scale = DenseMatrix.CreateIdentity(4);
-            Scale[0, 0] = 450;
-            Scale[1, 1] = 450;
+            Scale[0, 0] = 1000;
+            Scale[1, 1] = 1000;
 
             T = DenseMatrix.CreateIdentity(4);
 
             Zoom = DenseMatrix.CreateIdentity(4);
-            Zoom[3, 2] = 30;
-            ZoomProperty = 30;
         }
         #endregion // Constructor
 
@@ -139,9 +141,17 @@ namespace Rendering3D
 
             aspect = (double)sceneWidth / (double)sceneHeight;
 
-            M = DenseMatrix.OfArray(new double[,] { { aspect * fov, 0, 0, 0 },
-                                                    { 0, fov, 0, 0 },
-                                                    { 0, 0, far/(far-near), 1 },
+            double tanValue = 1 / Math.Tan(theta / 2);
+
+            T[3, 1] = cube1.GetCenterY();
+
+            Zoom[3, 1] = cube1.GetCenterY();
+            Zoom[3, 2] = 5;
+            ZoomProperty = 5;
+
+            M = DenseMatrix.OfArray(new double[,] { { tanValue, 0, 0, 0 },
+                                                    { 0, tanValue, 0, 0 },
+                                                    { 0, 0, -far/(far-near), -1 },
                                                     { 0, 0, (-far*near) / (far-near), 0} });
         }
         #endregion // Scene
@@ -218,22 +228,22 @@ namespace Rendering3D
 
             if (e.Key == Key.Up || e.Key == Key.W)
             {
-                xRotation -= rotationChange;
+                xRotation += rotationChange;
                 wasControlKeyDown = true;
             }
             if (e.Key == Key.Down || e.Key == Key.S)
             {
-                xRotation += rotationChange;
+                xRotation -= rotationChange;
                 wasControlKeyDown = true;
             }
             if (e.Key == Key.Left || e.Key == Key.A)
             {
-                yRotation += rotationChange;
+                yRotation -= rotationChange;
                 wasControlKeyDown = true;
             }
             if (e.Key == Key.Right || e.Key == Key.D)
             {
-                yRotation -= rotationChange;
+                yRotation += rotationChange;
                 wasControlKeyDown = true;
             }
 
@@ -282,26 +292,49 @@ namespace Rendering3D
             TransformCube(cube2, newMatrix, bitmap);
 
             Scene = ImageConverters.Bitmap2BitmapImage(bitmap);
-
-            Image imageControl = (Image)this.FindName("SceneImage");
-            imageControl.Source = Scene;
         }
 
         public void TransformCube(CustomCube cube, Matrix<double> matrix, Bitmap bitmap)
         {
+            List<CustomTriangle> newTriangles = new List<CustomTriangle>();
             foreach (CustomTriangle triangle in cube.triangles)
             {
                 List<CustomVertex> vertices = triangle.GetVertices();
+                List<Vector<double>> points = new List<Vector<double>>();
                 foreach (CustomVertex vertex in vertices)
                 {
-                    Vector<double> temp = TransformVertex(vertex, matrix);
-
-                    vertex.x = temp[0];
-                    vertex.y = temp[1];
-                    vertex.z = temp[2];
+                    Vector<double> temp = Vector<double>.Build.DenseOfArray(new double[] { vertex.x, vertex.y, vertex.z, 1 });
+                    Vector<double> point = temp * matrix;
+                    points.Add(point);
                 }
-                bitmap = triangle.DrawTriangle(bitmap, Color.White);
+
+                Vector<double> normal = CrossProduct(points[1] - points[0], points[2] - points[0]);
+
+                Vector<double> normalTemp = Vector<double>.Build.DenseOfArray(
+                                                new double[] { Math.Pow(normal[0], 3), Math.Pow(normal[1], 3), Math.Pow(normal[2], 3) });
+                
+                normal = normal / Math.Sqrt(normalTemp.Sum());
+
+                foreach (Vector<double> point in points)
+                {
+                    Vector<double> temp = (point * matrix / point[2] + C) / 2;
+                }
+
+                CustomTriangle newTriangle = new CustomTriangle(
+                                                    new CustomVertex(points[0][0], points[0][1], points[0][2]),
+                                                    new CustomVertex(points[1][0], points[1][1], points[1][2]),
+                                                    new CustomVertex(points[2][0], points[2][1], points[2][2])
+                                                );
+                newTriangles.Add(newTriangle);
             }
+
+            cube.triangles = newTriangles;
+            bitmap = cube.Draw(bitmap);
+
+            Scene = ImageConverters.Bitmap2BitmapImage(bitmap);
+
+            Image imageControl = (Image)this.FindName("SceneImage");
+            imageControl.Source = Scene;
         }
 
         public Vector<double> TransformVertex(CustomVertex vertex, Matrix<double> newMatrix)
@@ -312,6 +345,15 @@ namespace Rendering3D
             temp = ((temp * M / temp[2] + C) / 2) * Scale;
 
             return temp;
+        }
+
+        public Vector<double> CrossProduct(Vector<double> v, Vector<double> w)
+        {
+            Vector<double> vec = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0, 0 });
+            vec[0] = v[1] * w[2] - v[2] * w[1];
+            vec[1] = v[2] * w[0] - v[0] * w[2];
+            vec[2] = v[0] * w[1] - v[1] * w[0];
+            return vec;
         }
     }
 }
