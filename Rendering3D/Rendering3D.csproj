@@ -63,9 +63,11 @@
     </ApplicationDefinition>
     <Compile Include="Converters\DegreesToRadians.cs" />
     <Compile Include="Custom\CustomCube.cs" />
+    <Compile Include="Custom\CustomFace.cs" />
     <Compile Include="Custom\CustomTriangle.cs" />
     <Compile Include="Custom\CustomVertex.cs" />
     <Compile Include="Helpers\FillTriangle.cs" />
+    <Compile Include="Helpers\ScanLine.cs" />
     <Compile Include="Views\Rendering3D.xaml.cs">
       <DependentUpon>Rendering3D.xaml</DependentUpon>
     </Compile>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows;
 
 namespace Rendering3D.Custom
@@ -11,6 +12,7 @@ namespace Rendering3D.Custom
 
         public List<CustomVertex> vertices;
         public List<CustomTriangle> triangles;
+        public List<CustomFace> faces;
 
         private double a;
 
@@ -41,30 +43,49 @@ namespace Rendering3D.Custom
         public void GetTriangles()
         {
             triangles = new List<CustomTriangle>();
+            faces = new List<CustomFace>();
 
             // Front
             triangles.Add(new CustomTriangle(vertices[0], vertices[1], vertices[2]));
             triangles.Add(new CustomTriangle(vertices[1], vertices[2], vertices[3]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
 
             // Top
             triangles.Add(new CustomTriangle(vertices[1], vertices[3], vertices[7]));
             triangles.Add(new CustomTriangle(vertices[1], vertices[5], vertices[7]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
 
             // Back
             triangles.Add(new CustomTriangle(vertices[4], vertices[5], vertices[7]));
             triangles.Add(new CustomTriangle(vertices[4], vertices[6], vertices[7]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
 
             // Bottom
             triangles.Add(new CustomTriangle(vertices[0], vertices[2], vertices[4]));
             triangles.Add(new CustomTriangle(vertices[2], vertices[4], vertices[6]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
 
             // Left
             triangles.Add(new CustomTriangle(vertices[0], vertices[1], vertices[4]));
             triangles.Add(new CustomTriangle(vertices[1], vertices[4], vertices[5]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
 
             // Right
             triangles.Add(new CustomTriangle(vertices[2], vertices[3], vertices[7]));
             triangles.Add(new CustomTriangle(vertices[2], vertices[6], vertices[7]));
+            faces.Add(new CustomFace(triangles[triangles.Count - 1], triangles[triangles.Count - 2]));
+        }
+
+        public void UdateFacesTriangles()
+        {
+            int j = 0;
+            for(int i = 0; i < triangles.Count; i += 2)
+            {
+                faces[j].triangleA = triangles[i];
+                faces[j].triangleB = triangles[i + 1];
+                faces[j].UpdateAverageZ();
+                ++j;
+            }
         }
 
         public double GetArea()
@@ -79,27 +100,21 @@ namespace Rendering3D.Custom
 
         public Bitmap Draw(Bitmap bitmap)
         {
-            Random random = new Random(Guid.NewGuid().GetHashCode());
+            this.UdateFacesTriangles();
 
-            int r = random.Next(0, 255);
-            int g = random.Next(0, 255);
-            int b = random.Next(0, 255);
+            List<CustomFace> sortedFaces = faces.OrderByDescending(o => o.avgZ).ToList();
 
-            Color color = Color.FromArgb(r, g, b);
-
-            foreach (CustomTriangle triangle in triangles)
+            foreach (CustomFace face in sortedFaces)
             {
-                try
-                {
-                    bitmap = triangle.DrawTriangle(bitmap, color);
-                }
-                catch(Exception ex)
-                {
-                    MessageBox.Show(ex.Message);
-                }
-            }            
+                Tuple<CustomTriangle, CustomTriangle> faceTriangles = face.GetTriangles();
+                
+                bitmap = Helpers.FillTriangle.Apply(bitmap, faceTriangles.Item1.vertices, face.color);
+                bitmap = Helpers.FillTriangle.Apply(bitmap, faceTriangles.Item2.vertices, face.color);
+            }
 
             return bitmap;
         }
+
+
     }
 }

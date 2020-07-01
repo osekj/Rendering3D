@@ -56,9 +56,6 @@ namespace Rendering3D
         int sceneWidth;
         int sceneHeight;
 
-        double aspect;
-        double fov = 1;
-
         double theta = Math.PI / 2;
 
         double near = 0.1;
@@ -66,14 +63,14 @@ namespace Rendering3D
 
         Matrix<double> M;
         Matrix<double> Scale;
-        Matrix<double> T;
+        Matrix<double> Translate;
         Matrix<double> Zoom;
 
         Vector<double> Camera = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 0 });
 
-        Vector<double> C = DenseVector.Build.DenseOfArray(new double[4] { 1, 0.5, 0, 0 });
+        Vector<double> Shift = DenseVector.Build.DenseOfArray(new double[4] { 1, 0.5, 0, 0 });
 
-        double rotationChange = Math.PI / 120;
+        double rotationChange = Math.PI / 300;
 
         double xRotation = 0;
         double yRotation = 0;
@@ -96,11 +93,11 @@ namespace Rendering3D
             ZoomMinusSceneCommand = new RelayCommand(ZoomMinus);
 
             Scale = DenseMatrix.CreateIdentity(4);
-            Scale[0, 0] = 1000;
-            Scale[1, 1] = 1000;
+            Scale[0, 0] = 300;
+            Scale[1, 1] = 300;
 
-            T = DenseMatrix.CreateIdentity(4);
-
+            Translate = DenseMatrix.CreateIdentity(4);
+             
             Zoom = DenseMatrix.CreateIdentity(4);
         }
         #endregion // Constructor
@@ -130,7 +127,7 @@ namespace Rendering3D
             }
 
             cube1 = new CustomCube(700, 300, 50, 100);
-            cube2 = new CustomCube(550, 300, 150, 100);
+            cube2 = new CustomCube(550, 300, 10, 50);
 
             bitmap = cube1.Draw(bitmap);
             bitmap = cube2.Draw(bitmap);
@@ -139,15 +136,13 @@ namespace Rendering3D
 
             imageControl.Source = Scene;
 
-            aspect = (double)sceneWidth / (double)sceneHeight;
-
             double tanValue = 1 / Math.Tan(theta / 2);
 
-            T[3, 1] = cube1.GetCenterY();
+            //T[3, 1] = cube1.GetCenterY();
 
-            Zoom[3, 1] = cube1.GetCenterY();
+            //Zoom[3, 1] = cube1.GetCenterY();
             Zoom[3, 2] = 5;
-            ZoomProperty = 5;
+            ZoomProperty = 30;
 
             M = DenseMatrix.OfArray(new double[,] { { tanValue, 0, 0, 0 },
                                                     { 0, tanValue, 0, 0 },
@@ -246,6 +241,16 @@ namespace Rendering3D
                 yRotation += rotationChange;
                 wasControlKeyDown = true;
             }
+            if (e.Key == Key.Q)
+            {
+                Zoom[3, 2]--;
+                wasControlKeyDown = true;
+            }
+            if (e.Key == Key.E)
+            {
+                Zoom[3, 2]++;
+                wasControlKeyDown = true;
+            }
 
             if (wasControlKeyDown)
                 Redraw();
@@ -255,6 +260,13 @@ namespace Rendering3D
 
         private void Redraw()
         {
+            Bitmap bitmap = ImageConverters.BitmapImage2Bitmap(Scene);
+            using (Graphics graph = Graphics.FromImage(bitmap))
+            {
+                Rectangle ImageSize = new Rectangle(0, 0, sceneWidth, sceneHeight);
+                graph.FillRectangle(Brushes.Black, ImageSize);
+            }
+
             Matrix<double> rotationX = DenseMatrix.OfArray(new double[,]
             {
                 {1, 0, 0, 0 },
@@ -279,29 +291,24 @@ namespace Rendering3D
                 {0, 0, 0, 1 }
             });
 
-            Matrix<double> newMatrix = DenseMatrix.CreateIdentity(4) * T * rotationY * rotationX * rotationZ * Zoom;
+            Matrix<double> finalMatrix = DenseMatrix.CreateIdentity(4) * Translate * rotationY * rotationX * rotationZ * Zoom;
 
-            Bitmap bitmap = ImageConverters.BitmapImage2Bitmap(Scene);
-            using (Graphics graph = Graphics.FromImage(bitmap))
-            {
-                Rectangle ImageSize = new Rectangle(0, 0, sceneWidth, sceneHeight);
-                graph.FillRectangle(Brushes.Black, ImageSize);
-            }
-
-            TransformCube(cube1, newMatrix, bitmap);
-            TransformCube(cube2, newMatrix, bitmap);
+            bitmap = TransformCube(cube1, finalMatrix, bitmap);
+            bitmap = TransformCube(cube2, finalMatrix, bitmap);
 
             Scene = ImageConverters.Bitmap2BitmapImage(bitmap);
+
+            Image imageControl = (Image)this.FindName("SceneImage");
+            imageControl.Source = Scene;
         }
 
-        public void TransformCube(CustomCube cube, Matrix<double> matrix, Bitmap bitmap)
+        public Bitmap TransformCube(CustomCube cube, Matrix<double> matrix, Bitmap bitmap)
         {
             List<CustomTriangle> newTriangles = new List<CustomTriangle>();
             foreach (CustomTriangle triangle in cube.triangles)
             {
-                List<CustomVertex> vertices = triangle.GetVertices();
                 List<Vector<double>> points = new List<Vector<double>>();
-                foreach (CustomVertex vertex in vertices)
+                foreach (CustomVertex vertex in triangle.vertices)
                 {
                     Vector<double> temp = Vector<double>.Build.DenseOfArray(new double[] { vertex.x, vertex.y, vertex.z, 1 });
                     Vector<double> point = temp * matrix;
@@ -317,7 +324,7 @@ namespace Rendering3D
 
                 foreach (Vector<double> point in points)
                 {
-                    Vector<double> temp = (point * matrix / point[2] + C) / 2;
+                    Vector<double> temp = (point * matrix / point[2] + Shift) / 2;
                 }
 
                 CustomTriangle newTriangle = new CustomTriangle(
@@ -328,24 +335,28 @@ namespace Rendering3D
                 newTriangles.Add(newTriangle);
             }
 
+            List<CustomVertex> newVertices = new List<CustomVertex>();
+            foreach(CustomTriangle triangle in newTriangles)
+            {
+                newVertices.AddRange(triangle.vertices);
+            }
+
             cube.triangles = newTriangles;
+            cube.vertices = newVertices;
             bitmap = cube.Draw(bitmap);
 
-            Scene = ImageConverters.Bitmap2BitmapImage(bitmap);
-
-            Image imageControl = (Image)this.FindName("SceneImage");
-            imageControl.Source = Scene;
+            return bitmap;
         }
 
-        public Vector<double> TransformVertex(CustomVertex vertex, Matrix<double> newMatrix)
-        {
-            Vector<double> cords = Vector<double>.Build.DenseOfArray(new double[] { vertex.x, vertex.y, vertex.z, vertex.n });
+        //public Vector<double> TransformVertex(CustomVertex vertex, Matrix<double> newMatrix)
+        //{
+        //    Vector<double> cords = Vector<double>.Build.DenseOfArray(new double[] { vertex.x, vertex.y, vertex.z, vertex.n });
 
-            Vector<Double> temp = cords * newMatrix;
-            temp = ((temp * M / temp[2] + C) / 2) * Scale;
+        //    Vector<Double> temp = cords * newMatrix;
+        //    temp = ((temp * M / temp[2] + C) / 2) * Scale;
 
-            return temp;
-        }
+        //    return temp;
+        //}
 
         public Vector<double> CrossProduct(Vector<double> v, Vector<double> w)
         {

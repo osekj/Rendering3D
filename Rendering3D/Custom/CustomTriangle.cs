@@ -19,11 +19,12 @@ namespace Rendering3D.Custom
             return verticesToReturn;
         }
 
-        public Bitmap DrawTriangle(Bitmap bitmap, Color color)
+        public Bitmap DrawTriangle(Bitmap bitmap)
         {
             Pen pen = new Pen(Color.White, 1);
             using (var graphics = Graphics.FromImage(bitmap))
             {
+                
                 graphics.DrawLine(pen, (float)vertices[0].x, (float)vertices[0].y,
                                     (float)vertices[1].x, (float)vertices[1].y);
 
@@ -33,8 +34,6 @@ namespace Rendering3D.Custom
                 graphics.DrawLine(pen, (float)vertices[1].x, (float)vertices[1].y,
                                     (float)vertices[2].x, (float)vertices[2].y);
             }
-
-            //bitmap = Helpers.FillTriangle.Apply(bitmap, vertices, Color.Yellow);
 
             return bitmap;
         }
